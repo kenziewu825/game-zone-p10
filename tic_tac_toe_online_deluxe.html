@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe Deluxe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-main: #090d16;
+            --card-bg: rgba(19, 27, 46, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.18);
+            --accent-x: #ef4444;
+            --accent-o: #3b82f6;
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(244, 63, 94, 0.05) 0%, transparent 50%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #f1f5f9;
+            padding: 16px;
+            overflow-x: hidden;
+        }
+
+        /* Glass Cards */
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .screen {
+            width: 100%;
+            max-width: 440px;
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            z-index: 10;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Clean Buttons */
+        .btn-modern {
+            position: relative;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.04);
+            color: #f8fafc;
+            outline: none;
+        }
+
+        .btn-modern:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--border-hover);
+        }
+
+        .btn-primary {
+            background: #6366f1;
+            color: #ffffff;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: #4f46e5;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-modern:active {
+            transform: scale(0.98);
+        }
+
+        /* Board & Cells */
+        .board-container {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            padding: 16px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .cell {
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .cell:hover:not(.taken) {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .cell.taken {
+            cursor: default;
+        }
+
+        .cell.win-cell {
+            background: rgba(16, 185, 129, 0.12);
+            border-color: rgba(16, 185, 129, 0.5);
+        }
+
+        /* Symbols */
+        .symbol-svg {
+            width: 55%;
+            height: 55%;
+            stroke-dasharray: 240;
+            stroke-dashoffset: 240;
+            animation: draw-symbol 0.3s ease-out forwards;
+        }
+
+        @keyframes draw-symbol {
+            to { stroke-dashoffset: 0; }
+        }
+
+        .symbol-x { 
+            stroke: var(--accent-x); 
+            color: var(--accent-x); 
+            filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.6));
+        }
+        .symbol-o { 
+            stroke: var(--accent-o); 
+            color: var(--accent-o); 
+            filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+        }
+
+        /* Player Cards Header */
+        .player-badge {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            transition: all 0.2s ease;
+        }
+
+        .player-badge.active-turn {
+            border-color: rgba(99, 102, 241, 0.6);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        /* Difficulty Pills */
+        .diff-pill.active-pill {
+            background-color: #6366f1;
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+        }
+
+        /* Modals Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(9, 13, 22, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            padding: 16px;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 24px;
+            max-width: 400px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        #confetti-canvas {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: 99;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- Notification Toast for Achievements -->
+    <div id="achievement-toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-[200] bg-indigo-950/90 border border-indigo-500/50 backdrop-blur-md text-white px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 opacity-0 pointer-events-none -translate-y-4">
+        <div class="text-2xl" id="toast-icon">🏆</div>
+        <div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-400" id="toast-label">Pencapaian Terbuka!</div>
+            <div class="text-xs font-bold text-white" id="toast-title">Langkah Pertama</div>
+        </div>
+    </div>
+
+    <!-- ================= MENU UTAMA ================= -->
+    <div class="screen active" id="screen-menu">
+        <header class="flex justify-between items-center w-full">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center p-1.5">
+                    <svg class="w-full h-full text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>
+                    </svg>
+                </div>
+                <h1 class="text-base font-bold tracking-tight text-white">
+                    Tic Tac Toe
+                </h1>
+            </div>
+            <button class="btn-modern !p-2 !rounded-lg" id="menu-settings-btn" title="Pengaturan">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </button>
+        </header>
+
+        <main class="glass-panel p-5 flex flex-col gap-4">
+            <div class="text-center py-2">
+                <div class="mx-auto w-16 h-16 mb-3 rounded-2xl bg-gradient-to-tr from-sky-500/20 via-indigo-500/20 to-rose-500/20 border border-indigo-500/30 flex items-center justify-center shadow-lg shadow-indigo-500/10 p-3">
+                    <svg class="w-full h-full" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Grid lines -->
+                        <line x1="36" y1="12" x2="36" y2="88" stroke="rgba(255,255,255,0.25)" stroke-width="6" stroke-linecap="round"/>
+                        <line x1="64" y1="12" x2="64" y2="88" stroke="rgba(255,255,255,0.25)" stroke-width="6" stroke-linecap="round"/>
+                        <line x1="12" y1="36" x2="88" y2="36" stroke="rgba(255,255,255,0.25)" stroke-width="6" stroke-linecap="round"/>
+                        <line x1="12" y1="64" x2="88" y2="64" stroke="rgba(255,255,255,0.25)" stroke-width="6" stroke-linecap="round"/>
+                        <!-- X Symbol Top Left -->
+                        <path d="M 18 18 L 30 30 M 30 18 L 18 30" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
+                        <!-- O Symbol Bottom Right -->
+                        <circle cx="80" cy="80" r="7" stroke="#3b82f6" stroke-width="5" fill="none"/>
+                        <!-- Center Symbol -->
+                        <path d="M 44 44 L 56 56 M 56 44 L 44 56" stroke="#818cf8" stroke-width="5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <h2 class="text-lg font-bold text-white tracking-tight">Pilih Mode Permainan</h2>
+                <p class="text-xs text-slate-400 mt-0.5">Bermain solo melawan AI cerdas atau berdua di satu perangkat.</p>
+            </div>
+
+            <div class="flex flex-col gap-2.5 w-full">
+                <!-- Bot Play Card with direct Difficulty Selector -->
+                <div class="bg-white/5 border border-white/10 rounded-xl p-3 flex flex-col gap-2.5">
+                    <button class="btn-modern btn-primary w-full justify-start px-3" id="start-bot-btn">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        <span>Lawan Komputer (AI)</span>
+                    </button>
+                    <div class="flex flex-col gap-1.5">
+                        <span class="text-[11px] font-semibold text-slate-300 px-1" id="lbl-select-diff">Tingkat Kesulitan AI:</span>
+                        <div class="grid grid-cols-4 gap-1 bg-black/40 p-1 rounded-lg border border-white/5" id="diff-pills-container">
+                            <button type="button" class="diff-pill py-1 text-[11px] font-semibold rounded text-slate-400 hover:text-white transition-all text-center" data-diff="easy" id="pill-easy">Mudah</button>
+                            <button type="button" class="diff-pill py-1 text-[11px] font-semibold rounded text-slate-400 hover:text-white transition-all text-center" data-diff="medium" id="pill-medium">Sedang</button>
+                            <button type="button" class="diff-pill py-1 text-[11px] font-semibold rounded text-slate-400 hover:text-white transition-all text-center" data-diff="hard" id="pill-hard">Sulit</button>
+                            <button type="button" class="diff-pill py-1 text-[11px] font-semibold rounded text-slate-400 hover:text-white transition-all text-center active-pill" data-diff="extreme" id="pill-extreme">Extreme</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PvP Pass and Play -->
+                <button class="btn-modern w-full justify-start px-4" id="start-pvp-btn">
+                    <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    <span>Dua Pemain (Lokal)</span>
+                </button>
+
+                <!-- Leaderboard Button -->
+                <button class="btn-modern w-full justify-start px-4" id="btn-open-leaderboard">
+                    <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    <span>Statistik & Pencapaian</span>
+                </button>
+
+                <!-- Settings Button -->
+                <button class="btn-modern w-full justify-start px-4" id="btn-open-settings-menu">
+                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <span>Pengaturan</span>
+                </button>
+            </div>
+        </main>
+
+        <!-- Quick Stats Card -->
+        <div class="glass-panel p-3.5 flex justify-around text-center text-xs">
+            <div>
+                <div class="text-slate-400 font-medium">Menang</div>
+                <div class="text-sm font-bold text-sky-400 mt-0.5" id="menu-stat-wins">0</div>
+            </div>
+            <div class="w-px bg-white/10"></div>
+            <div>
+                <div class="text-slate-400 font-medium">Beruntun</div>
+                <div class="text-sm font-bold text-indigo-400 mt-0.5" id="menu-stat-streak">0</div>
+            </div>
+            <div class="w-px bg-white/10"></div>
+            <div>
+                <div class="text-slate-400 font-medium">Rekor Terbaik</div>
+                <div class="text-sm font-bold text-emerald-400 mt-0.5" id="menu-stat-best">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= PERMAINAN ================= -->
+    <div class="screen" id="screen-game">
+        <header class="flex justify-between items-center w-full">
+            <button class="btn-modern !py-1.5 !px-3 text-xs" id="home-btn">
+                ← Menu
+            </button>
+            <div class="flex items-center gap-1.5" id="game-mode-container">
+                <div class="text-xs font-semibold text-slate-400 tracking-wide uppercase" id="game-mode-tag">
+                    VS AI
+                </div>
+                <select id="game-diff-select" class="bg-indigo-950/70 border border-indigo-500/30 text-indigo-300 text-[11px] font-bold rounded-lg px-2 py-1 outline-none cursor-pointer hover:border-indigo-400 transition-all">
+                    <option value="easy" id="game-opt-easy">Mudah</option>
+                    <option value="medium" id="game-opt-medium">Sedang</option>
+                    <option value="hard" id="game-opt-hard">Sulit</option>
+                    <option value="extreme" id="game-opt-extreme" selected>Extreme</option>
+                </select>
+            </div>
+            <button class="btn-modern !p-2 !rounded-lg" id="game-settings-btn">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </button>
+        </header>
+
+        <!-- Header Status Pemain -->
+        <div class="grid grid-cols-2 gap-2.5">
+            <div class="player-badge active-turn" id="badge-p1">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-red-400">X</span>
+                    <span class="text-xs font-bold text-slate-300" id="score-p1">0</span>
+                </div>
+                <div class="text-xs font-semibold truncate text-white" id="name-p1">Anda</div>
+                <div class="text-[10px] text-slate-400" id="status-p1">Giliran Anda</div>
+            </div>
+
+            <div class="player-badge" id="badge-p2">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-blue-400">O</span>
+                    <span class="text-xs font-bold text-slate-300" id="score-p2">0</span>
+                </div>
+                <div class="text-xs font-semibold truncate text-white" id="name-p2">Komputer</div>
+                <div class="text-[10px] text-slate-400" id="status-p2">Menunggu</div>
+            </div>
+        </div>
+
+        <!-- Papan Permainan -->
+        <main class="glass-panel board-container relative">
+            <div class="board" id="board">
+                <div class="cell" data-index="0"></div>
+                <div class="cell" data-index="1"></div>
+                <div class="cell" data-index="2"></div>
+                <div class="cell" data-index="3"></div>
+                <div class="cell" data-index="4"></div>
+                <div class="cell" data-index="5"></div>
+                <div class="cell" data-index="6"></div>
+                <div class="cell" data-index="7"></div>
+                <div class="cell" data-index="8"></div>
+            </div>
+        </main>
+
+        <!-- Actions -->
+        <div class="grid grid-cols-2 gap-2.5">
+            <button class="btn-modern btn-primary" id="restart-btn">Ronde Baru</button>
+            <button class="btn-modern" id="rules-btn">Panduan</button>
+        </div>
+
+        <!-- Aturan -->
+        <section class="glass-panel p-3.5 text-xs text-slate-300 space-y-1.5" id="rules-card" style="display: none;">
+            <div class="font-semibold text-white">Aturan Sederhana:</div>
+            <p class="text-slate-400">Susun 3 simbol sejajar secara horizontal, vertikal, atau diagonal untuk memenangkan ronde.</p>
+        </section>
+    </div>
+
+    <!-- ================= MODAL: STATISTIK ================= -->
+    <div class="modal-overlay" id="leaderboard-modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center border-b border-white/10 pb-3">
+                <h2 class="text-sm font-bold text-white" id="modal-stat-title">Statistik & Pencapaian</h2>
+                <button class="text-slate-400 hover:text-white text-sm" id="close-leaderboard-btn">✕</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 py-2 text-xs">
+                <div class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col justify-between">
+                    <span class="text-slate-400 font-medium text-[11px]" id="lbl-modal-wins">Total Menang</span>
+                    <span class="text-sky-400 font-bold text-base mt-1" id="stat-modal-wins">0</span>
+                </div>
+                <div class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col justify-between">
+                    <span class="text-slate-400 font-medium text-[11px]" id="lbl-modal-losses">Total Kalah</span>
+                    <span class="text-rose-400 font-bold text-base mt-1" id="stat-modal-losses">0</span>
+                </div>
+                <div class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col justify-between">
+                    <span class="text-slate-400 font-medium text-[11px]" id="lbl-modal-streak">Beruntun Saat Ini</span>
+                    <span class="text-indigo-400 font-bold text-base mt-1" id="stat-modal-streak">0</span>
+                </div>
+                <div class="bg-white/5 border border-white/10 rounded-xl p-2.5 flex flex-col justify-between">
+                    <span class="text-slate-400 font-medium text-[11px]" id="lbl-modal-best">Rekor Terbaik</span>
+                    <span class="text-emerald-400 font-bold text-base mt-1" id="stat-modal-best">0</span>
+                </div>
+            </div>
+
+            <!-- Bagian Pencapaian -->
+            <div class="border-t border-white/10 pt-3">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-xs font-bold text-white uppercase tracking-wider" id="lbl-achievements-header">Pencapaian</h3>
+                    <span class="text-[11px] font-semibold text-indigo-400" id="achievement-counter">0 / 12</span>
+                </div>
+                <div class="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1" id="achievements-list">
+                    <!-- Dynamic Achievements -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: PENGATURAN ================= -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center border-b border-white/10 pb-3">
+                <h2 class="text-sm font-bold text-white" id="modal-settings-title">Pengaturan</h2>
+                <button class="text-slate-400 hover:text-white text-sm" id="close-settings-btn">✕</button>
+            </div>
+
+            <!-- Pilih Bahasa -->
+            <div class="flex flex-col gap-1.5">
+                <span class="text-xs font-medium text-slate-400" id="lbl-language">Bahasa</span>
+                <select id="setting-language" class="bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none">
+                    <option value="id">Bahasa Indonesia</option>
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                    <option value="zh">中文 (Chinese)</option>
+                </select>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <span class="text-xs font-medium text-slate-400" id="lbl-difficulty">Tingkat Kesulitan Komputer</span>
+                <select id="setting-difficulty" class="bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none">
+                    <option value="easy" id="opt-easy">Mudah</option>
+                    <option value="medium" id="opt-medium">Sedang</option>
+                    <option value="hard" id="opt-hard">Sangat Sulit</option>
+                    <option value="extreme" id="opt-extreme" selected>Tingkat Tinggi (Minimax)</option>
+                </select>
+            </div>
+
+            <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/10 text-xs">
+                <span class="font-medium text-slate-200" id="lbl-sfx">Efek Suara (SFX)</span>
+                <input type="checkbox" id="toggle-sfx" class="w-4 h-4 accent-indigo-500 cursor-pointer" checked>
+            </div>
+
+            <button class="btn-modern !text-rose-400 !border-rose-500/20 !py-2 mt-1" id="reset-stats-action">
+                Reset Statistik
+            </button>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: HASIL ================= -->
+    <div class="modal-overlay" id="result-modal">
+        <div class="modal-content text-center items-center py-6">
+            <div class="text-4xl mb-1" id="modal-icon">🏆</div>
+            <div class="text-base font-bold text-white" id="modal-title">Pemain Menang</div>
+            <div class="text-xs text-slate-400 mt-0.5" id="modal-desc">Permainan selesai.</div>
+            
+            <div class="w-full mt-4">
+                <button class="btn-modern btn-primary w-full" id="modal-play-again">Lanjut Permainan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Engine Logic (Pure JS - No Dependencies) -->
+    <script>
+        const i18n = {
+            id: {
+                subtitle: "Bermain solo melawan AI cerdas atau berdua di satu perangkat.",
+                modeBot: "Lawan Komputer (AI)",
+                modePvp: "Dua Pemain (Lokal)",
+                leaderboard: "Statistik & Pencapaian",
+                statWins: "Menang",
+                statStreak: "Beruntun",
+                statBest: "Rekor Terbaik",
+                vsAi: "VS KOMPUTER",
+                vsPvp: "2 PEMAIN LOKAL",
+                you: "Anda",
+                bot: "Komputer",
+                playerX: "Pemain X",
+                playerO: "Pemain O",
+                turnYour: "Giliran Anda",
+                turnRunning: "Giliran Berjalan",
+                waiting: "Menunggu...",
+                newRound: "Ronde Baru",
+                guide: "Panduan",
+                rulesTitle: "Aturan Sederhana:",
+                rulesDesc: "Susun 3 simbol sejajar secara horizontal, vertikal, atau diagonal untuk memenangkan ronde.",
+                settingsTitle: "Pengaturan",
+                language: "Bahasa",
+                selectDiff: "Tingkat Kesulitan AI:",
+                botDiff: "Tingkat Kesulitan Komputer",
+                diffEasy: "Mudah",
+                diffMedium: "Sedang",
+                diffHard: "Sulit",
+                diffExtreme: "Extreme (Minimax)",
+                sfx: "Efek Suara (SFX)",
+                resetStats: "Reset Statistik",
+                winTitle: "Kemenangan Untuk Anda!",
+                winStreak: "Kemenangan beruntun:",
+                botWinTitle: "Komputer Menang",
+                botWinDesc: "Coba lagi di ronde berikutnya.",
+                drawTitle: "Hasil Seri",
+                drawDesc: "Tidak ada pemenang pada ronde ini.",
+                pvpWinTitle: "Pemain {player} Menang",
+                pvpWinDesc: "Selamat atas kemenangan Anda.",
+                playAgain: "Lanjut Permainan",
+                menuBtn: "← Menu",
+                achHeader: "Pencapaian",
+                achUnlocked: "Pencapaian Terbuka!",
+                
+                // Achievements Keys
+                achFirstWin: "Langkah Pertama",
+                achFirstWinDesc: "Menangkan 1 permainan pertama.",
+                achStreak3: "On Fire!",
+                achStreak3Desc: "Capai 3 kemenangan beruntun.",
+                achStreak5: "Tak Terhentikan",
+                achStreak5Desc: "Capai 5 kemenangan beruntun.",
+                achStreak10: "Dominasi Mutlak",
+                achStreak10Desc: "Capai 10 kemenangan beruntun.",
+                achWin10: "Raja Tic Tac Toe",
+                achWin10Desc: "Kumpulkan total 10 kemenangan.",
+                achWin25: "Master Tic Tac Toe",
+                achWin25Desc: "Kumpulkan total 25 kemenangan.",
+                achExtreme: "Penakluk Extreme AI",
+                achExtremeDesc: "Kalahkan Komputer pada tingkat kesulitan Extreme.",
+                achExtreme3: "Pembantai Bot",
+                achExtreme3Desc: "Capai 3 kemenangan beruntun di kesulitan Extreme.",
+                achFastWin: "Kemenangan Kilat",
+                achFastWinDesc: "Menangkan pertandingan hanya dalam 3 langkah.",
+                achDraw3: "Pakar Strategi",
+                achDraw3Desc: "Dapatkan hasil seri sebanyak 3 kali.",
+                achPlay10: "Pecandu Game",
+                achPlay10Desc: "Mainkan total 10 pertandingan.",
+                achPvpPlayed: "Duet Maut",
+                achPvpPlayedDesc: "Mainkan mode Dua Pemain (Lokal)."
+            },
+            en: {
+                subtitle: "Play solo against smart AI or pass and play locally.",
+                modeBot: "Vs Computer (AI)",
+                modePvp: "Two Players (Local)",
+                leaderboard: "Stats & Achievements",
+                statWins: "Wins",
+                statStreak: "Streak",
+                statBest: "Best Record",
+                vsAi: "VS COMPUTER",
+                vsPvp: "2 PLAYERS LOCAL",
+                you: "You",
+                bot: "Computer",
+                playerX: "Player X",
+                playerO: "Player O",
+                turnYour: "Your Turn",
+                turnRunning: "Turn Active",
+                waiting: "Waiting...",
+                newRound: "New Round",
+                guide: "Guide",
+                rulesTitle: "Simple Rules:",
+                rulesDesc: "Line up 3 matching symbols horizontally, vertically, or diagonally to win the round.",
+                settingsTitle: "Settings",
+                language: "Language",
+                selectDiff: "AI Difficulty:",
+                botDiff: "Computer Difficulty",
+                diffEasy: "Easy",
+                diffMedium: "Medium",
+                diffHard: "Hard",
+                diffExtreme: "Extreme (Minimax)",
+                sfx: "Sound Effects (SFX)",
+                resetStats: "Reset Statistics",
+                winTitle: "Victory Is Yours!",
+                winStreak: "Winning streak:",
+                botWinTitle: "Computer Won",
+                botWinDesc: "Try again in the next round.",
+                drawTitle: "Draw Match",
+                drawDesc: "There is no winner in this round.",
+                pvpWinTitle: "Player {player} Wins",
+                pvpWinDesc: "Congratulations on your victory.",
+                playAgain: "Continue Game",
+                menuBtn: "← Menu",
+                achHeader: "Achievements",
+                achUnlocked: "Achievement Unlocked!",
+
+                // Achievements Keys
+                achFirstWin: "First Step",
+                achFirstWinDesc: "Win your first game.",
+                achStreak3: "On Fire!",
+                achStreak3Desc: "Reach a 3-game win streak.",
+                achStreak5: "Unstoppable",
+                achStreak5Desc: "Reach a 5-game win streak.",
+                achStreak10: "Absolute Dominance",
+                achStreak10Desc: "Reach a 10-game win streak.",
+                achWin10: "King of Tic Tac Toe",
+                achWin10Desc: "Collect 10 total victories.",
+                achWin25: "Tic Tac Toe Master",
+                achWin25Desc: "Collect 25 total victories.",
+                achExtreme: "Extreme AI Slayer",
+                achExtremeDesc: "Defeat the Computer on Extreme difficulty.",
+                achExtreme3: "Bot Slayer",
+                achExtreme3Desc: "Reach a 3-game win streak on Extreme difficulty.",
+                achFastWin: "Speedy Victory",
+                achFastWinDesc: "Win a game in just 3 moves.",
+                achDraw3: "Master Tactician",
+                achDraw3Desc: "Achieve 3 draw matches.",
+                achPlay10: "Game Addict",
+                achPlay10Desc: "Play a total of 10 matches.",
+                achPvpPlayed: "Dynamic Duo",
+                achPvpPlayedDesc: "Play a Two-Player Local match."
+            },
+            es: {
+                subtitle: "Juega solo contra la IA o con un amigo localmente.",
+                modeBot: "Contra la IA (Bot)",
+                modePvp: "Dos Jugadores (Local)",
+                leaderboard: "Estadísticas",
+                statWins: "Victorias",
+                statStreak: "Racha",
+                statBest: "Mejor Racha",
+                vsAi: "CONTRA IA",
+                vsPvp: "2 JUGADORES LOCAL",
+                you: "Tú",
+                bot: "Computadora",
+                playerX: "Jugador X",
+                playerO: "Jugador O",
+                turnYour: "Tu Turno",
+                turnRunning: "Turno En Curso",
+                waiting: "Esperando...",
+                newRound: "Nueva Ronda",
+                guide: "Guía",
+                rulesTitle: "Reglas Simples:",
+                rulesDesc: "Alinea 3 símbolos iguales horizontal, vertical o diagonalmente para ganar la ronda.",
+                settingsTitle: "Configuración",
+                language: "Idioma",
+                selectDiff: "Dificultad de IA:",
+                botDiff: "Dificultad de la IA",
+                diffEasy: "Fácil",
+                diffMedium: "Medio",
+                diffHard: "Difícil",
+                diffExtreme: "Extremo (Minimax)",
+                sfx: "Efectos de Sonido (SFX)",
+                resetStats: "Restablecer Estadísticas",
+                winTitle: "¡Ganaste!",
+                winStreak: "Racha de victorias:",
+                botWinTitle: "Ganó la Computadora",
+                botWinDesc: "Inténtalo de nuevo en la siguiente ronda.",
+                drawTitle: "Empate",
+                drawDesc: "No hay ganador en esta ronda.",
+                pvpWinTitle: "Gana el Jugador {player}",
+                pvpWinDesc: "¡Felicidades por tu victoria!",
+                playAgain: "Siguiente Ronda",
+                menuBtn: "← Menú",
+                achHeader: "Logros",
+                achUnlocked: "¡Logro Desbloqueado!",
+
+                // Achievements Keys
+                achFirstWin: "Primer Paso",
+                achFirstWinDesc: "Gana tu primera partida.",
+                achStreak3: "¡En Racha!",
+                achStreak3Desc: "Alcanza una racha de 3 victorias.",
+                achStreak5: "Imparable",
+                achStreak5Desc: "Alcanza una racha de 5 victorias.",
+                achStreak10: "Dominación Absoluta",
+                achStreak10Desc: "Alcanza una racha de 10 victorias.",
+                achWin10: "Rey de Tic Tac Toe",
+                achWin10Desc: "Acumula 10 victorias totales.",
+                achWin25: "Maestro de Tic Tac Toe",
+                achWin25Desc: "Acumula 25 victorias totales.",
+                achExtreme: "Cazador de IA Extrema",
+                achExtremeDesc: "Derrota a la computadora en dificultad Extrema.",
+                achExtreme3: "Cazador Supremo",
+                achExtreme3Desc: "Alcanza una racha de 3 victorias en dificultad Extrema.",
+                achFastWin: "Victoria Relámpago",
+                achFastWinDesc: "Gana una partida en solo 3 movimientos.",
+                achDraw3: "Táctico Experto",
+                achDraw3Desc: "Consigue 3 empates.",
+                achPlay10: "Adicto al Juego",
+                achPlay10Desc: "Juega un total de 10 partidas.",
+                achPvpPlayed: "Dúo Dinámico",
+                achPvpPlayedDesc: "Juega una partida de Dos Jugadores Local."
+            },
+            zh: {
+                subtitle: "单人对战 AI 或同屏本地双人对战。",
+                modeBot: "人机对战 (AI)",
+                modePvp: "本地双人对战",
+                leaderboard: "统计与成就",
+                statWins: "胜场",
+                statStreak: "连胜",
+                statBest: "最高连胜",
+                vsAi: "人机对战",
+                vsPvp: "本地双人",
+                you: "你",
+                bot: "电脑",
+                playerX: "玩家 X",
+                playerO: "玩家 O",
+                turnYour: "轮到你了",
+                turnRunning: "思考中...",
+                waiting: "等待中...",
+                newRound: "新一局",
+                guide: "指南",
+                rulesTitle: "规则说明:",
+                rulesDesc: "横向、纵向或对角线连成 3 个相同符号即可获胜。",
+                settingsTitle: "设置",
+                language: "语言",
+                selectDiff: "AI 难度选择:",
+                botDiff: "人机难度",
+                diffEasy: "简单",
+                diffMedium: "中等",
+                diffHard: "困难",
+                diffExtreme: "大师 (Minimax)",
+                sfx: "音效 (SFX)",
+                resetStats: "重置统计",
+                winTitle: "恭喜获胜！",
+                winStreak: "当前连胜:",
+                botWinTitle: "电脑获胜",
+                botWinDesc: "下一局再接再厉！",
+                drawTitle: "平局",
+                drawDesc: "本局未分出胜负。",
+                pvpWinTitle: "玩家 {player} 获胜",
+                pvpWinDesc: "恭喜获得胜利！",
+                playAgain: "继续游戏",
+                menuBtn: "← 菜单",
+                achHeader: "成就",
+                achUnlocked: "解锁新成就！",
+
+                // Achievements Keys
+                achFirstWin: "初出茅庐",
+                achFirstWinDesc: "赢得首场胜利。",
+                achStreak3: "手感火热",
+                achStreak3Desc: "达成 3 连胜。",
+                achStreak5: "势不可挡",
+                achStreak5Desc: "达成 5 连胜。",
+                achStreak10: "绝对统治",
+                achStreak10Desc: "达成 10 连胜。",
+                achWin10: "井字棋之王",
+                achWin10Desc: "累计获得 10 场胜利。",
+                achWin25: "井字棋大师",
+                achWin25Desc: "累计获得 25 场胜利。",
+                achExtreme: "极限 AI 克星",
+                achExtremeDesc: "在极限难度下击败电脑。",
+                achExtreme3: "人机克星",
+                achExtreme3Desc: "在极限难度下达成 3 连胜。",
+                achFastWin: "闪电获胜",
+                achFastWinDesc: "仅用 3 步赢得比赛。",
+                achDraw3: "战术大师",
+                achDraw3Desc: "达成 3 次平局。",
+                achPlay10: "游戏达人",
+                achPlay10Desc: "累计完成 10 场比赛。",
+                achPvpPlayed: "双人对决",
+                achPvpPlayedDesc: "完成一场本地双人对战。"
+            }
+        };
+
+        const ACHIEVEMENTS_DEF = [
+            { id: 'first_win', icon: '🥉', titleKey: 'achFirstWin', descKey: 'achFirstWinDesc' },
+            { id: 'streak_3', icon: '🔥', titleKey: 'achStreak3', descKey: 'achStreak3Desc' },
+            { id: 'streak_5', icon: '⚡', titleKey: 'achStreak5', descKey: 'achStreak5Desc' },
+            { id: 'streak_10', icon: '🚀', titleKey: 'achStreak10', descKey: 'achStreak10Desc' },
+            { id: 'win_10', icon: '👑', titleKey: 'achWin10', descKey: 'achWin10Desc' },
+            { id: 'win_25', icon: '🏆', titleKey: 'achWin25', descKey: 'achWin25Desc' },
+            { id: 'fast_win', icon: '⚡', titleKey: 'achFastWin', descKey: 'achFastWinDesc' },
+            { id: 'extreme_win', icon: '🧠', titleKey: 'achExtreme', descKey: 'achExtremeDesc' },
+            { id: 'extreme_streak_3', icon: '🤖', titleKey: 'achExtreme3', descKey: 'achExtreme3Desc' },
+            { id: 'draw_master', icon: '🤝', titleKey: 'achDraw3', descKey: 'achDraw3Desc' },
+            { id: 'play_10', icon: '🎮', titleKey: 'achPlay10', descKey: 'achPlay10Desc' },
+            { id: 'pvp_played', icon: '👥', titleKey: 'achPvpPlayed', descKey: 'achPvpPlayedDesc' }
+        ];
+
+        let currentLang = localStorage.getItem('ttt_language') || 'id';
+        let botDifficulty = localStorage.getItem('ttt_difficulty') || 'extreme';
+
+        function updateDifficultyUI(diff) {
+            botDifficulty = diff;
+            localStorage.setItem('ttt_difficulty', diff);
+
+            // Update Menu Pills
+            document.querySelectorAll('.diff-pill').forEach(pill => {
+                if (pill.getAttribute('data-diff') === diff) {
+                    pill.classList.add('active-pill');
+                } else {
+                    pill.classList.remove('active-pill');
+                }
+            });
+
+            // Update Game Dropdown
+            const gameSelect = document.getElementById('game-diff-select');
+            if (gameSelect) gameSelect.value = diff;
+
+            // Update Settings Select
+            const settingSelect = document.getElementById('setting-difficulty');
+            if (settingSelect) settingSelect.value = diff;
+        }
+
+        function applyLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('ttt_language', lang);
+            const t = i18n[lang] || i18n.id;
+
+            const startBotSpan = document.querySelector('#start-bot-btn span');
+            if (startBotSpan) startBotSpan.innerText = t.modeBot;
+            const startPvpSpan = document.querySelector('#start-pvp-btn span');
+            if (startPvpSpan) startPvpSpan.innerText = t.modePvp;
+            const openLbSpan = document.querySelector('#btn-open-leaderboard span');
+            if (openLbSpan) openLbSpan.innerText = t.leaderboard;
+            const openSettingsSpan = document.querySelector('#btn-open-settings-menu span');
+            if (openSettingsSpan) openSettingsSpan.innerText = t.settingsTitle;
+
+            const lblSelectDiff = document.getElementById('lbl-select-diff');
+            if (lblSelectDiff) lblSelectDiff.innerText = t.selectDiff;
+
+            // Difficulty Labels in Pills
+            const pillEasy = document.getElementById('pill-easy');
+            if (pillEasy) pillEasy.innerText = t.diffEasy;
+            const pillMedium = document.getElementById('pill-medium');
+            if (pillMedium) pillMedium.innerText = t.diffMedium;
+            const pillHard = document.getElementById('pill-hard');
+            if (pillHard) pillHard.innerText = t.diffHard;
+            const pillExtreme = document.getElementById('pill-extreme');
+            if (pillExtreme) pillExtreme.innerText = t.diffExtreme;
+
+            // Difficulty Labels in Game Screen Dropdown
+            const gOptEasy = document.getElementById('game-opt-easy');
+            if (gOptEasy) gOptEasy.innerText = t.diffEasy;
+            const gOptMedium = document.getElementById('game-opt-medium');
+            if (gOptMedium) gOptMedium.innerText = t.diffMedium;
+            const gOptHard = document.getElementById('game-opt-hard');
+            if (gOptHard) gOptHard.innerText = t.diffHard;
+            const gOptExtreme = document.getElementById('game-opt-extreme');
+            if (gOptExtreme) gOptExtreme.innerText = t.diffExtreme;
+
+            const sub = document.querySelector('#screen-menu main > div p');
+            if (sub) sub.innerText = t.subtitle;
+
+            const menuStatsLabels = document.querySelectorAll('#screen-menu .glass-panel.p-3\\.5 > div > .text-slate-400');
+            if (menuStatsLabels.length >= 3) {
+                menuStatsLabels[0].innerText = t.statWins;
+                menuStatsLabels[1].innerText = t.statStreak;
+                menuStatsLabels[2].innerText = t.statBest;
+            }
+
+            const homeBtn = document.getElementById('home-btn');
+            if (homeBtn) homeBtn.innerText = t.menuBtn;
+            const restartBtn = document.getElementById('restart-btn');
+            if (restartBtn) restartBtn.innerText = t.newRound;
+            const rulesBtn = document.getElementById('rules-btn');
+            if (rulesBtn) rulesBtn.innerText = t.guide;
+
+            const rulesTitle = document.querySelector('#rules-card .font-semibold');
+            if (rulesTitle) rulesTitle.innerText = t.rulesTitle;
+            const rulesDesc = document.querySelector('#rules-card p');
+            if (rulesDesc) rulesDesc.innerText = t.rulesDesc;
+
+            const setSettingsTitle = document.getElementById('modal-settings-title');
+            if (setSettingsTitle) setSettingsTitle.innerText = t.settingsTitle;
+            const lblLang = document.getElementById('lbl-language');
+            if (lblLang) lblLang.innerText = t.language;
+            const lblDiff = document.getElementById('lbl-difficulty');
+            if (lblDiff) lblDiff.innerText = t.botDiff;
+            const optEasy = document.getElementById('opt-easy');
+            if (optEasy) optEasy.innerText = t.diffEasy;
+            const optMedium = document.getElementById('opt-medium');
+            if (optMedium) optMedium.innerText = t.diffMedium;
+            const optHard = document.getElementById('opt-hard');
+            if (optHard) optHard.innerText = t.diffHard;
+            const optExtreme = document.getElementById('opt-extreme');
+            if (optExtreme) optExtreme.innerText = t.diffExtreme;
+            const lblSfx = document.getElementById('lbl-sfx');
+            if (lblSfx) lblSfx.innerText = t.sfx;
+            const resetStatsBtn = document.getElementById('reset-stats-action');
+            if (resetStatsBtn) resetStatsBtn.innerText = t.resetStats;
+
+            const playAgainBtn = document.getElementById('modal-play-again');
+            if (playAgainBtn) playAgainBtn.innerText = t.playAgain;
+
+            const langSelect = document.getElementById('setting-language');
+            if (langSelect) langSelect.value = lang;
+
+            updateBadgesUI();
+            updateStatsDisplay();
+        }
+
+        // Audio Engine
+        const AudioEngine = {
+            ctx: null,
+            sfxEnabled: true,
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContextClass) this.ctx = new AudioContextClass();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+
+            playTone(freq, type = 'sine', duration = 0.08, gainVal = 0.08) {
+                if (!this.sfxEnabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {}
+            },
+
+            moveX() { this.playTone(520, 'sine', 0.08, 0.1); },
+            moveO() { this.playTone(420, 'sine', 0.08, 0.1); },
+            win() {
+                if (!this.sfxEnabled) return;
+                [523.25, 659.25, 783.99].forEach((freq, idx) => {
+                    setTimeout(() => this.playTone(freq, 'sine', 0.15, 0.12), idx * 80);
+                });
+            },
+            draw() { this.playTone(320, 'sine', 0.15, 0.08); },
+            click() { this.playTone(700, 'sine', 0.04, 0.05); }
+        };
+
+        const WINNING_COMBOS = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ];
+
+        let boardState = Array(9).fill('');
+        let currentPlayer = 'X';
+        let startingPlayer = 'X';
+        let userSymbol = 'X';
+        let botSymbol = 'O';
+        let isGameActive = true;
+        let gameMode = 'bot';
+        let playerMoveCount = 0;
+
+        let stats = {
+            winsP1: 0,
+            winsP2: 0,
+            losses: 0,
+            currentStreak: 0,
+            bestStreak: 0,
+            extremeStreak: 0,
+            draws: 0,
+            totalGames: 0,
+            achievements: []
+        };
+
+        const cells = document.querySelectorAll('.cell');
+        const scoreP1El = document.getElementById('score-p1');
+        const scoreP2El = document.getElementById('score-p2');
+        const nameP1El = document.getElementById('name-p1');
+        const nameP2El = document.getElementById('name-p2');
+        const statusP1El = document.getElementById('status-p1');
+        const statusP2El = document.getElementById('status-p2');
+        const gameModeTag = document.getElementById('game-mode-tag');
+        const gameDiffSelect = document.getElementById('game-diff-select');
+        const badgeP1 = document.getElementById('badge-p1');
+        const badgeP2 = document.getElementById('badge-p2');
+
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        const settingsModal = document.getElementById('settings-modal');
+        const resultModal = document.getElementById('result-modal');
+
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId)?.classList.add('active');
+        }
+
+        function createSvgX() {
+            return `<svg class="symbol-svg symbol-x" viewBox="0 0 50 50">
+                <path d="M 12,12 L 38,38 M 38,12 L 12,38" stroke="var(--accent-x)" stroke-width="6" stroke-linecap="round" fill="none" />
+            </svg>`;
+        }
+
+        function createSvgO() {
+            return `<svg class="symbol-svg symbol-o" viewBox="0 0 50 50">
+                <circle cx="25" cy="25" r="14" stroke="var(--accent-o)" stroke-width="6" fill="none" />
+            </svg>`;
+        }
+
+        function resetBoard(forceFirstPlayer = null) {
+            boardState = Array(9).fill('');
+            isGameActive = true;
+            playerMoveCount = 0;
+
+            if (forceFirstPlayer) {
+                startingPlayer = forceFirstPlayer;
+            } else {
+                startingPlayer = startingPlayer === 'X' ? 'O' : 'X';
+            }
+            currentPlayer = startingPlayer;
+
+            cells.forEach(cell => {
+                cell.innerHTML = '';
+                cell.classList.remove('taken', 'win-cell');
+            });
+
+            updateBadgesUI();
+
+            if (gameMode === 'bot' && currentPlayer === botSymbol) {
+                setTimeout(makeBotMove, 400);
+            }
+        }
+
+        cells.forEach(cell => {
+            cell.addEventListener('click', () => {
+                const index = parseInt(cell.getAttribute('data-index'));
+                handleCellClick(index);
+            });
+        });
+
+        function handleCellClick(index) {
+            if (!isGameActive || boardState[index] !== '') return;
+            if (gameMode === 'bot' && currentPlayer !== userSymbol) return;
+
+            if (currentPlayer === userSymbol) {
+                playerMoveCount++;
+            }
+
+            executeMove(index, currentPlayer);
+
+            if (isGameActive && gameMode === 'bot' && currentPlayer === botSymbol) {
+                setTimeout(makeBotMove, 400);
+            }
+        }
+
+        function executeMove(index, symbol) {
+            boardState[index] = symbol;
+            const cell = cells[index];
+            cell.classList.add('taken');
+            cell.innerHTML = symbol === 'X' ? createSvgX() : createSvgO();
+
+            if (symbol === 'X') AudioEngine.moveX();
+            else AudioEngine.moveO();
+
+            if (checkWin(boardState, symbol)) {
+                isGameActive = false;
+                highlightWinCells(symbol);
+                handleWin(symbol);
+                return;
+            }
+
+            if (checkDraw(boardState)) {
+                isGameActive = false;
+                handleDraw();
+                return;
+            }
+
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateBadgesUI();
+        }
+
+        function checkWin(board, symbol) {
+            return WINNING_COMBOS.some(combo => {
+                return combo.every(index => board[index] === symbol);
+            });
+        }
+
+        function highlightWinCells(symbol) {
+            WINNING_COMBOS.forEach(combo => {
+                if (combo.every(index => boardState[index] === symbol)) {
+                    combo.forEach(index => cells[index].classList.add('win-cell'));
+                }
+            });
+        }
+
+        function checkDraw(board) {
+            return board.every(cell => cell !== '');
+        }
+
+        function checkAchievements(winner) {
+            const unlocked = stats.achievements || [];
+
+            function unlock(id) {
+                if (!unlocked.includes(id)) {
+                    unlocked.push(id);
+                    stats.achievements = unlocked;
+                    saveStorage();
+                    showAchievementToast(id);
+                }
+            }
+
+            if (stats.winsP1 >= 1) unlock('first_win');
+            if (stats.currentStreak >= 3) unlock('streak_3');
+            if (stats.currentStreak >= 5) unlock('streak_5');
+            if (stats.currentStreak >= 10) unlock('streak_10');
+            if (stats.winsP1 >= 10) unlock('win_10');
+            if (stats.winsP1 >= 25) unlock('win_25');
+
+            if (gameMode === 'bot' && botDifficulty === 'extreme' && winner === userSymbol) {
+                unlock('extreme_win');
+            }
+            if ((stats.extremeStreak || 0) >= 3) unlock('extreme_streak_3');
+            if (winner === userSymbol && playerMoveCount <= 3) unlock('fast_win');
+            if ((stats.draws || 0) >= 3) unlock('draw_master');
+            if ((stats.totalGames || 0) >= 10) unlock('play_10');
+            if (gameMode === 'pvp') unlock('pvp_played');
+        }
+
+        function showAchievementToast(id) {
+            const toast = document.getElementById('achievement-toast');
+            const toastTitle = document.getElementById('toast-title');
+            const toastLabel = document.getElementById('toast-label');
+            const toastIcon = document.getElementById('toast-icon');
+
+            const achDef = ACHIEVEMENTS_DEF.find(a => a.id === id);
+            if (!achDef || !toast) return;
+
+            const t = i18n[currentLang] || i18n.id;
+            if (toastLabel) toastLabel.innerText = t.achUnlocked;
+            if (toastTitle) toastTitle.innerText = t[achDef.titleKey] || id;
+            if (toastIcon) toastIcon.innerText = achDef.icon;
+
+            toast.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', '-translate-y-4');
+            }, 3000);
+        }
+
+        function handleWin(winner) {
+            const t = i18n[currentLang] || i18n.id;
+            let title = '';
+            let desc = '';
+            let icon = '🏆';
+
+            stats.totalGames = (stats.totalGames || 0) + 1;
+
+            if (gameMode === 'bot') {
+                if (winner === userSymbol) {
+                    stats.winsP1++;
+                    stats.currentStreak++;
+                    if (stats.currentStreak > stats.bestStreak) {
+                        stats.bestStreak = stats.currentStreak;
+                    }
+                    if (botDifficulty === 'extreme') {
+                        stats.extremeStreak = (stats.extremeStreak || 0) + 1;
+                    } else {
+                        stats.extremeStreak = 0;
+                    }
+                    title = t.winTitle;
+                    desc = `${t.winStreak} ${stats.currentStreak}`;
+                    icon = '🎉';
+                    triggerConfetti();
+                    AudioEngine.win();
+                } else {
+                    stats.losses++;
+                    stats.winsP2++;
+                    stats.currentStreak = 0;
+                    stats.extremeStreak = 0;
+                    title = t.botWinTitle;
+                    desc = t.botWinDesc;
+                    icon = '🤖';
+                    AudioEngine.draw();
+                }
+            } else {
+                if (winner === 'X') {
+                    stats.winsP1++;
+                    title = t.pvpWinTitle.replace('{player}', 'X');
+                } else {
+                    stats.winsP2++;
+                    title = t.pvpWinTitle.replace('{player}', 'O');
+                }
+                desc = t.pvpWinDesc;
+                icon = '👑';
+                triggerConfetti();
+                AudioEngine.win();
+            }
+
+            checkAchievements(winner);
+            saveStorage();
+            updateBadgesUI();
+
+            setTimeout(() => {
+                showModalResult(icon, title, desc);
+            }, 600);
+        }
+
+        function handleDraw() {
+            const t = i18n[currentLang] || i18n.id;
+            stats.totalGames = (stats.totalGames || 0) + 1;
+            stats.draws = (stats.draws || 0) + 1;
+            if (gameMode === 'bot') {
+                stats.currentStreak = 0;
+                stats.extremeStreak = 0;
+            }
+            checkAchievements(null);
+            saveStorage();
+            AudioEngine.draw();
+            setTimeout(() => {
+                showModalResult('🤝', t.drawTitle, t.drawDesc);
+            }, 400);
+        }
+
+        function showModalResult(icon, title, desc) {
+            const modalIcon = document.getElementById('modal-icon');
+            const modalTitle = document.getElementById('modal-title');
+            const modalDesc = document.getElementById('modal-desc');
+
+            if (modalIcon) modalIcon.innerText = icon;
+            if (modalTitle) modalTitle.innerText = title;
+            if (modalDesc) modalDesc.innerText = desc;
+
+            resultModal?.classList.add('active');
+        }
+
+        function makeBotMove() {
+            if (!isGameActive) return;
+
+            const availableIndices = boardState
+                .map((val, idx) => (val === '' ? idx : null))
+                .filter(val => val !== null);
+
+            if (availableIndices.length === 0) return;
+
+            let moveIndex;
+
+            if (botDifficulty === 'easy') {
+                moveIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+            } else if (botDifficulty === 'medium') {
+                moveIndex = findMediumMove(availableIndices);
+            } else if (botDifficulty === 'hard') {
+                // Hard: Menyerang dan bertahan dari ancaman langsung, namun ada 45% peluang menggunakan taktik taktis biasa
+                // Ini memberi kesempatan pemain untuk membuat perangkap serangan ganda (fork)
+                if (Math.random() < 0.55) {
+                    moveIndex = getBestMoveMinimax();
+                } else {
+                    moveIndex = findMediumMove(availableIndices);
+                }
+            } else {
+                // Extreme: Sangat tangguh dengan analisis Minimax tingkat tinggi (85%), 
+                // namun memiliki celah 15% pada posisi awal sehingga pemain yang menyusun taktik matang tetap bisa menang
+                if (Math.random() < 0.85) {
+                    moveIndex = getBestMoveMinimax();
+                } else {
+                    moveIndex = findMediumMove(availableIndices);
+                }
+            }
+
+            if (moveIndex !== undefined && moveIndex !== null) {
+                executeMove(moveIndex, botSymbol);
+            }
+        }
+
+        function findMediumMove(available) {
+            for (let idx of available) {
+                boardState[idx] = botSymbol;
+                if (checkWin(boardState, botSymbol)) {
+                    boardState[idx] = '';
+                    return idx;
+                }
+                boardState[idx] = '';
+            }
+            for (let idx of available) {
+                boardState[idx] = userSymbol;
+                if (checkWin(boardState, userSymbol)) {
+                    boardState[idx] = '';
+                    return idx;
+                }
+                boardState[idx] = '';
+            }
+            if (available.includes(4)) return 4;
+            return available[Math.floor(Math.random() * available.length)];
+        }
+
+        function getBestMoveMinimax() {
+            let bestScore = -Infinity;
+            let bestMove = null;
+
+            for (let i = 0; i < 9; i++) {
+                if (boardState[i] === '') {
+                    boardState[i] = botSymbol;
+                    let score = minimaxAlgo(boardState, 0, false);
+                    boardState[i] = '';
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = i;
+                    }
+                }
+            }
+            return bestMove;
+        }
+
+        function minimaxAlgo(board, depth, isMaximizing) {
+            if (checkWin(board, botSymbol)) return 10 - depth;
+            if (checkWin(board, userSymbol)) return depth - 10;
+            if (checkDraw(board)) return 0;
+
+            if (isMaximizing) {
+                let bestScore = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = botSymbol;
+                        let score = minimaxAlgo(board, depth + 1, false);
+                        board[i] = '';
+                        bestScore = Math.max(score, bestScore);
+                    }
+                }
+                return bestScore;
+            } else {
+                let bestScore = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = userSymbol;
+                        let score = minimaxAlgo(board, depth + 1, true);
+                        board[i] = '';
+                        bestScore = Math.min(score, bestScore);
+                    }
+                }
+                return bestScore;
+            }
+        }
+
+        function triggerConfetti() {
+            const canvas = document.getElementById('confetti-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const pieces = Array.from({ length: 60 }, () => ({
+                x: Math.random() * canvas.width,
+                y: -10,
+                r: Math.random() * 6 + 4,
+                d: Math.random() * 5 + 2,
+                color: ['#38bdf8', '#f43f5e', '#a855f7', '#34d399', '#fbbf24'][Math.floor(Math.random() * 5)],
+            }));
+
+            let frame = 0;
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                pieces.forEach(p => {
+                    p.y += p.d;
+                    p.x += Math.sin(frame / 10);
+                    ctx.beginPath();
+                    ctx.fillStyle = p.color;
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                frame++;
+                if (frame < 120) {
+                    requestAnimationFrame(draw);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+            draw();
+        }
+
+        function updateBadgesUI() {
+            if (scoreP1El) scoreP1El.innerText = stats.winsP1;
+            if (scoreP2El) scoreP2El.innerText = stats.winsP2;
+
+            const t = i18n[currentLang] || i18n.id;
+
+            if (gameMode === 'bot') {
+                if (nameP1El) nameP1El.innerText = t.you;
+                if (nameP2El) nameP2El.innerText = t.bot;
+                if (gameModeTag) gameModeTag.innerText = t.vsAi;
+                if (gameDiffSelect) gameDiffSelect.style.display = 'inline-block';
+            } else if (gameMode === 'pvp') {
+                if (nameP1El) nameP1El.innerText = t.playerX;
+                if (nameP2El) nameP2El.innerText = t.playerO;
+                if (gameModeTag) gameModeTag.innerText = t.vsPvp;
+                if (gameDiffSelect) gameDiffSelect.style.display = 'none';
+            }
+
+            if (currentPlayer === 'X') {
+                badgeP1?.classList.add('active-turn');
+                badgeP2?.classList.remove('active-turn');
+                if (statusP1El) statusP1El.innerText = t.turnYour;
+                if (statusP2El) statusP2El.innerText = t.waiting;
+            } else {
+                badgeP2?.classList.add('active-turn');
+                badgeP1?.classList.remove('active-turn');
+                if (statusP2El) statusP2El.innerText = t.turnRunning;
+                if (statusP1El) statusP1El.innerText = t.waiting;
+            }
+        }
+
+        // Event Listeners for Difficulty Selectors
+        document.querySelectorAll('.diff-pill').forEach(pill => {
+            pill.addEventListener('click', (e) => {
+                AudioEngine.click();
+                const diff = e.currentTarget.getAttribute('data-diff');
+                if (diff) updateDifficultyUI(diff);
+            });
+        });
+
+        document.getElementById('game-diff-select')?.addEventListener('change', (e) => {
+            AudioEngine.click();
+            updateDifficultyUI(e.target.value);
+        });
+
+        document.getElementById('setting-difficulty')?.addEventListener('change', (e) => {
+            updateDifficultyUI(e.target.value);
+        });
+
+        document.getElementById('setting-language')?.addEventListener('change', (e) => {
+            applyLanguage(e.target.value);
+        });
+
+        document.getElementById('start-bot-btn')?.addEventListener('click', () => {
+            gameMode = 'bot'; switchScreen('screen-game'); resetBoard('X');
+        });
+
+        document.getElementById('start-pvp-btn')?.addEventListener('click', () => {
+            gameMode = 'pvp'; switchScreen('screen-game'); resetBoard('X');
+        });
+
+        document.getElementById('btn-open-leaderboard')?.addEventListener('click', () => {
+            leaderboardModal?.classList.add('active');
+        });
+
+        document.getElementById('close-leaderboard-btn')?.addEventListener('click', () => leaderboardModal?.classList.remove('active'));
+
+        document.getElementById('home-btn')?.addEventListener('click', () => {
+            resultModal?.classList.remove('active'); switchScreen('screen-menu');
+        });
+
+        const openSettings = () => settingsModal?.classList.add('active');
+        document.getElementById('menu-settings-btn')?.addEventListener('click', openSettings);
+        document.getElementById('btn-open-settings-menu')?.addEventListener('click', openSettings);
+        document.getElementById('game-settings-btn')?.addEventListener('click', openSettings);
+        document.getElementById('close-settings-btn')?.addEventListener('click', () => settingsModal?.classList.remove('active'));
+
+        document.getElementById('toggle-sfx')?.addEventListener('change', (e) => {
+            AudioEngine.sfxEnabled = e.target.checked;
+        });
+
+        document.getElementById('restart-btn')?.addEventListener('click', () => resetBoard());
+        document.getElementById('modal-play-again')?.addEventListener('click', () => {
+            resultModal?.classList.remove('active'); resetBoard();
+        });
+
+        document.getElementById('rules-btn')?.addEventListener('click', () => {
+            const card = document.getElementById('rules-card');
+            if (card) card.style.display = card.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.getElementById('reset-stats-action')?.addEventListener('click', () => {
+            stats.winsP1 = 0; stats.winsP2 = 0; stats.losses = 0; stats.currentStreak = 0; stats.bestStreak = 0;
+            stats.extremeStreak = 0; stats.draws = 0; stats.totalGames = 0; stats.achievements = [];
+            saveStorage(); updateBadgesUI(); settingsModal?.classList.remove('active');
+        });
+
+        function saveStorage() {
+            try {
+                localStorage.setItem('ttt_stats', JSON.stringify(stats));
+            } catch (e) {
+                console.error("Gagal menyimpan ke LocalStorage:", e);
+            }
+            updateStatsDisplay();
+        }
+
+        function loadStorage() {
+            try {
+                const saved = localStorage.getItem('ttt_stats');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    stats = {
+                        winsP1: parsed.winsP1 || 0,
+                        winsP2: parsed.winsP2 || 0,
+                        losses: parsed.losses || 0,
+                        currentStreak: parsed.currentStreak || 0,
+                        bestStreak: parsed.bestStreak || 0,
+                        extremeStreak: parsed.extremeStreak || 0,
+                        draws: parsed.draws || 0,
+                        totalGames: parsed.totalGames || 0,
+                        achievements: Array.isArray(parsed.achievements) ? parsed.achievements : []
+                    };
+                }
+            } catch (e) {
+                console.error("Gagal memuat dari LocalStorage:", e);
+            }
+            updateStatsDisplay();
+        }
+
+        function updateStatsDisplay() {
+            const menuWins = document.getElementById('menu-stat-wins');
+            if (menuWins) menuWins.innerText = stats.winsP1;
+            const menuStreak = document.getElementById('menu-stat-streak');
+            if (menuStreak) menuStreak.innerText = stats.currentStreak;
+            const menuBest = document.getElementById('menu-stat-best');
+            if (menuBest) menuBest.innerText = stats.bestStreak;
+
+            const modalWins = document.getElementById('stat-modal-wins');
+            if (modalWins) modalWins.innerText = stats.winsP1;
+            const modalLosses = document.getElementById('stat-modal-losses');
+            if (modalLosses) modalLosses.innerText = stats.losses;
+            const modalStreak = document.getElementById('stat-modal-streak');
+            if (modalStreak) modalStreak.innerText = stats.currentStreak;
+            const modalBest = document.getElementById('stat-modal-best');
+            if (modalBest) modalBest.innerText = stats.bestStreak;
+
+            // Render daftar pencapaian
+            const achList = document.getElementById('achievements-list');
+            const achCounter = document.getElementById('achievement-counter');
+            if (achList) {
+                achList.innerHTML = '';
+                const unlockedList = stats.achievements || [];
+                if (achCounter) achCounter.innerText = `${unlockedList.length} / ${ACHIEVEMENTS_DEF.length}`;
+
+                const t = i18n[currentLang] || i18n.id;
+                ACHIEVEMENTS_DEF.forEach(ach => {
+                    const isUnlocked = unlockedList.includes(ach.id);
+                    const title = t[ach.titleKey] || ach.id;
+                    const desc = t[ach.descKey] || '';
+
+                    const item = document.createElement('div');
+                    item.className = `p-2.5 rounded-xl border flex items-center gap-3 transition-all ${
+                        isUnlocked 
+                            ? 'bg-indigo-600/15 border-indigo-500/40 text-white' 
+                            : 'bg-white/5 border-white/5 text-slate-500 opacity-60'
+                    }`;
+                    item.innerHTML = `
+                        <div class="text-xl ${isUnlocked ? '' : 'grayscale'}">${ach.icon}</div>
+                        <div class="flex-1">
+                            <div class="text-xs font-bold ${isUnlocked ? 'text-indigo-300' : 'text-slate-400'}">${title}</div>
+                            <div class="text-[10px] ${isUnlocked ? 'text-slate-300' : 'text-slate-500'}">${desc}</div>
+                        </div>
+                        <div class="text-xs font-bold">${isUnlocked ? '✓' : '🔒'}</div>
+                    `;
+                    achList.appendChild(item);
+                });
+            }
+        }
+
+        loadStorage();
+        updateDifficultyUI(botDifficulty);
+        applyLanguage(currentLang);
+    </script>
+</body>
+</html>
